@@ -3,7 +3,6 @@ from uno import *
 from strat import *
 import random
 import numpy as np
-from bisect import bisect
 
 # ADD NOTE FOR GLEN: we take in whole game, but dont look at other players hands
 
@@ -40,7 +39,7 @@ class QLearningAgent():
             # count number of cards of each color
             cards_per_color = [len([card for card in hand if card.color == color]) for color in game.deck.colors]
             # bucket cards into 0, 1-2, 3+
-            for color in cards_per_color:
+            for color in range(len(cards_per_color)):
                 if cards_per_color[color] == 0:
                     cards_per_color[color] = 0
                 elif cards_per_color[color] <= 2:
@@ -55,7 +54,7 @@ class QLearningAgent():
             colors = ['R', 'G', 'Y', 'B']
             num_special = [len([card for card in hand if card.color == color and card.rank in ["R", "S", "D"]]) for color in colors]
             # bucket cards into 0, 1+
-            for color in num_special:
+            for color in range(len(num_special)):
                 if num_special[color] == 0:
                     num_special[color] = 0
                 else:
@@ -67,9 +66,9 @@ class QLearningAgent():
         ## - Num of cards all the other players have (1, 2-4, 5+)(num_players) = 3(num_players-1)
         def bucket_num_cards_other_players():
             # count number of cards of each player
-            num_cards_other = [len(game.deck.player_pile[player]) for player in range(len(game.deck.player_pile)) if player != game.current_player]
+            num_cards_other = [len(game.deck.player_pile[player]) for player in range(game.num_players) if player != game.current_player]
             # bucket cards into 1, 2-4, 5+
-            for player in num_cards_other:
+            for player in range(len(num_cards_other)):
                 if num_cards_other[player] == 1:
                     num_cards_other[player] = 0
                 elif num_cards_other[player] <= 4:
@@ -81,16 +80,19 @@ class QLearningAgent():
 
         ## - Discard pile color (4) = 4
         def discard_pile_color_idx():
-            return game.deck.colors.index(game.discard_pile[:-1].color)
+            return game.deck.colors.index(game.discard_card().color)
 
         ## - Prev Discard pile color (4) = 4 
         def discard_pile_color_idx_prev():
-            return game.deck.colors.index(game.discard_pile[-2].color)
+            print(len(game.deck.discard_pile))
+            return game.deck.colors.index(game.deck.discard_pile[-2].color)
         
         def index_all():
             (aH, bH, cH, dH, eH) = (bucket_num_cards_color(), bucket_special_cards_per_color(), bucket_num_cards_other_players(), discard_pile_color_idx(), discard_pile_color_idx_prev())
             (aN, bN, cN, dN, eN) = (243, 8, 3 * (len(game.deck.player_pile) - 1), 4, 4)
             return aH + (bH * aN) + (cH * aN * bN) + (dH * aN * bN * cN) + (eH * aN * bN * cN * dN)
+        
+        return index_all()
             
 
     
@@ -105,10 +107,10 @@ class QLearningAgent():
         if card.rank in specials:
             idx = specials.index(card.rank) + 1
         if idx is None:
-            if card.color = game.discard_card().color:
+            if card.color == game.discard_card().color:
                 idx = 6
             ## Prioritize color if rank and color are equal
-            elif card.rank = game.discard_card().rank:
+            elif card.rank == game.discard_card().rank:
                 idx = 7
         return idx
 
@@ -140,18 +142,52 @@ class QLearningAgent():
             while game.current_player != agent_idx:
                 ## Take other_player strat actions until it's my turn
                 other_action = random_strategy(game)
-                game.take_action(other_action, game.current_player)
+                game.take_action(other_action)
             while not game.is_over():
                 ## Choose action
-                state_bucket = bucket_state(game)
+                state_bucket = self.bucket_state(game)
                 action = self.get_action(game, state_bucket)
-                game.take_action(action, agent_idx)
+                game.take_action(action)
                 reward = 1 if game.has_won(agent_idx) else 0
                 ## Compute the reward and final state (by simulating the other players)
                 while game.current_player != agent_idx:
                     other_action = random_strategy(game)
-                    game.take_action(other_action, game.current_player)
+                    game.take_action(other_action)
                     reward = -1 if game.has_won(game.current_player) else reward
-                next_state = bucket_state(game)
+                next_state = self.bucket_state(game)
                 ## Update Q-values
                 self.update(state_bucket, action, reward, next_state)
+
+    def play(self, game, agent_idx=0, other_player=random_strategy):
+        while not game.is_over():
+            ## Choose action
+            state_bucket = self.bucket_state(game)
+            action = self.get_action(game, state_bucket)
+            game.take_action(action)
+            ## Compute the reward and final state (by simulating the other players)
+            while game.current_player != agent_idx:
+                other_action = random_strategy(game)
+                game.take_action(other_action)
+        return game.has_won(agent_idx)
+
+    def simulate(self, num_games=100, agent_idx=0, other_player=random_strategy):
+        wins = 0
+        for i in range(num_games):
+            game = Uno(2, Deck(1))
+            game.initial_state()
+            wins += self.play(game, agent_idx, other_player)
+        return wins / num_games
+
+    def save_q(self, filename):
+        np.save(filename, self.Q)
+    
+    def load_q(self, filename):
+        self.Q = np.load(filename)
+    
+    def train_and_save(self, filename, timelimit=10, agent_idx=0, other_player=random_strategy):
+        self.train(timelimit, agent_idx, other_player)
+        self.save_q(filename)
+    
+    def load_and_simulate(self, filename, num_games=100, agent_idx=0, other_player=random_strategy):
+        self.load_q(filename)
+        return self.simulate(num_games, agent_idx, other_player)

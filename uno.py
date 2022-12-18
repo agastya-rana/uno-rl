@@ -1,10 +1,8 @@
 import itertools as it
 import random
-from abc import ABC, abstractmethod
 
-
-def simulate_game(strategy, num_players, num_decks=1, verbose=False):
-    game = Uno(num_players, Deck(num_decks))
+def simulate_game(strategy, num_players, num_decks=1, verbose=False, discard_memory=5):
+    game = Uno(num_players, Deck(num_decks, discard_memory=discard_memory))
     game.initial_state()
     while True:
         if verbose:
@@ -19,17 +17,17 @@ def simulate_game(strategy, num_players, num_decks=1, verbose=False):
                 print("Discard pile: {}".format(game.deck.discard_pile))
             return game.current_player
     
-class Uno(ABC):
+class Uno():
     def __init__(self, num_players, deck):
         self.direction = 1
         self.current_player = 0
         self.num_players = num_players
         self.deck = deck
-        pass
 
     def initial_state(self):
         self.deck.deal_deck(self.num_players)
-        self.deck.discard_pile.append(self.deck.draw_pile.pop())
+        for play in range(self.deck.discard_memory):
+            self.deck.discard_pile.append(self.deck.draw_pile.pop())
         while not self.deck.discard_pile[-1].rank in ["W", "WD", "D", "R", "S"]:
             self.deck.draw_pile.append(self.deck.discard_pile.pop())
             self.deck.shuffle_deck()
@@ -103,11 +101,12 @@ class Deck():
     colored_ranks = [str(n) for n in range(10)] + [str(n) for n in range(1, 10)] + ["R", "S", "D"]*2 ## Draw2, Reverse, Skip
     uncolor_ranks = ["W", "WD"]*4 ## Wild, wild draw 4
 
-    def __init__(self, deck_copies):
+    def __init__(self, deck_copies, discard_memory=5):
         ## Initializes a base deck
         self.player_pile = []
         self.discard_pile = []
         self.draw_pile = self.base_cards(deck_copies)
+        self.discard_memory = discard_memory
         self.shuffle_deck()
         
     def base_cards(self, deck_copies):
@@ -126,15 +125,23 @@ class Deck():
             self.draw_cards(7, player)
 
     def draw_cards(self, num_cards, player):
+        def reset_wilds(deck=self):
+            for card in deck.draw_pile:
+                if card.rank in ["W", "WD"]:
+                    card.color = None
+
         cards = []
         for card in range(num_cards):
             if len(self.draw_pile) == 0:
-                self.draw_pile = self.discard_pile[:-1]
-                self.discard_pile = [self.discard_pile[-1]]
+                self.draw_pile = self.discard_pile[:-self.discard_memory]
+                self.discard_pile = self.discard_pile[-self.discard_memory:]
                 self.shuffle_deck()
+                reset_wilds()
             cards.append(self.draw_pile.pop())
         self.player_pile[player].extend(cards)
         return cards
+
+
 
     def play_card(self, card, player_idx):
         try:
