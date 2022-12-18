@@ -95,9 +95,12 @@ class Uno(ABC):
     def is_over(self):
         return any([len(self.deck.player_pile[player_idx]) == 0 for player_idx in range(self.num_players)])
 
+    def discard_card(self):
+        return self.deck.discard_pile[-1]
+
 class Deck():
     colors = ['R', 'G', 'Y', 'B', None]
-    colored_ranks = [str(n) for n in range(10)] + [str(n) for n in range(1, 10)] + ["D", "R", "S"]*2 ## Draw2, Reverse, Skip
+    colored_ranks = [str(n) for n in range(10)] + [str(n) for n in range(1, 10)] + ["R", "S", "D"]*2 ## Draw2, Reverse, Skip
     uncolor_ranks = ["W", "WD"]*4 ## Wild, wild draw 4
 
     def __init__(self, deck_copies):

@@ -35,9 +35,22 @@ class QLearningAgent():
         idx = 0
         return idx
     
-    def bucket_action(self, action):
+    def bucket_action(self, action, game):
         ## Return index of Q-learning bucket that corresponds to this action
-        idx = 0
+        ## 8 actions
+        idx = None
+        specials = ["R", "S", "D", "W", "WD"]
+        card, param = action
+        if card == None:
+            idx = 0
+        if card.rank in specials:
+            idx = specials.index(card.rank) + 1
+        if idx is None:
+            if card.color = game.discard_card().color:
+                idx = 6
+            ## Prioritize color if rank and color are equal
+            elif card.rank = game.discard_card().rank:
+                idx = 7
         return idx
 
     def get_action(self, game, state_bucket):
