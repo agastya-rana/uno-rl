@@ -22,6 +22,7 @@ import numpy as np
 
 class QLearningAgent():
     specials = ["R", "S", "D", "W", "WD"]
+    colors_w_none = ['R', 'G', 'Y', 'B', None]
     def __init__(self, num_states, num_actions, alpha=0.1, gamma=0.9, epsilon=0.1):
         self.num_states = num_states
         self.num_actions = num_actions
@@ -38,8 +39,7 @@ class QLearningAgent():
         ## - Num cards of each color that we have (0, 1-2, 3+)^(4 + [W OR WD]) = 243
         def bucket_num_cards_color():
             # count number of cards of each color
-            colors = ['R', 'G', 'Y', 'B', None]
-            cards_per_color = [len([card for card in hand if card.color == color]) for color in colors]
+            cards_per_color = [len([card for card in hand if card.color == color]) for color in self.colors_w_none]
             # bucket cards into 0, 1-2, 3+
             for color in range(len(cards_per_color)):
                 if cards_per_color[color] == 0:
@@ -51,7 +51,7 @@ class QLearningAgent():
             # index into 0-242
             return sum([cards_per_color[color] * (3 ** color) for color in range(len(cards_per_color))])
         
-        ## - Num of each special cards, per color (0, 1+) ^ (([R OR S OR D]) (4)) = 8 
+        ## - Num of each special cards, per color (0, 1+) ^ (([R OR S OR D]) (4)) = 16
         def bucket_special_cards_per_color():
             num_special = [len([card for card in hand if card.color == color and card.rank in ["R", "S", "D"]]) for color in game.deck.colors]
             # bucket cards into 0, 1+
@@ -60,7 +60,7 @@ class QLearningAgent():
                     num_special[color] = 0
                 else:
                     num_special[color] = 1
-            # index into 0-7
+            # index into 0-15
             return sum([num_special[color] * (2 ** color) for color in range(len(num_special))])
 
 
@@ -90,7 +90,7 @@ class QLearningAgent():
         
         def index_all():
             (aH, bH, cH, dH, eH) = (bucket_num_cards_color(), bucket_special_cards_per_color(), bucket_num_cards_other_players(), discard_pile_color_idx(), discard_pile_color_idx_prev())
-            (aN, bN, cN, dN, eN) = (243, 8, 3 * (len(game.deck.player_pile) - 1), 4, 4)
+            (aN, bN, cN, dN, eN) = (243, 16, 3 * (len(game.deck.player_pile) - 1), 4, 4)
             return aH + (bH * aN) + (cH * aN * bN) + (dH * aN * bN * cN) + (eH * aN * bN * cN * dN)
         
         return index_all()
