@@ -96,6 +96,3 @@ class QLearningAgent():
                 next_state = bucket_state(game)
                 ## Update Q-values
                 self.update(state_bucket, action, reward, next_state)
-
-
-
