@@ -28,21 +28,23 @@ class Uno():
         self.deck.deal_deck(self.num_players)
         for play in range(self.deck.discard_memory):
             self.deck.discard_pile.append(self.deck.draw_pile.pop())
-        while not self.deck.discard_pile[-1].rank in ["W", "WD", "D", "R", "S"]:
-            self.deck.draw_pile.append(self.deck.discard_pile.pop())
-            self.deck.shuffle_deck()
-            self.deck.discard_pile.append(self.deck.draw_pile.pop())
+            while self.discard_card().rank in ["W", "WD", "D", "R", "S"]:
+                self.deck.draw_pile.append(self.deck.discard_pile.pop())
+                self.deck.shuffle_deck()
+                self.deck.discard_pile.append(self.deck.draw_pile.pop())
 
     def take_action(self, action):
+        #print("Taking action", action)
         card, param = action
         player_idx = self.current_player
-        if card == None:    # Player has no valid plays
+        if card is None:    # Player has no valid plays
             self.deck.draw_cards(1, player_idx)
             self.next_player()
             return None
         if not self.is_valid_play(card, player_idx):    # Player tries to play an invalid card
             raise ValueError("Card cannot be legally played by player.")
-        if param != None:   # Player plays a wild card
+        if card.color is None:   # Player plays a wild card
+            assert param is not None
             card.color = param
         self.deck.play_card(card, player_idx)
         self.effect(card, player_idx)
@@ -97,7 +99,7 @@ class Uno():
         return self.deck.discard_pile[-1]
 
 class Deck():
-    colors = ['R', 'G', 'Y', 'B', None]
+    colors = ['R', 'G', 'Y', 'B']
     colored_ranks = [str(n) for n in range(10)] + [str(n) for n in range(1, 10)] + ["R", "S", "D"]*2 ## Draw2, Reverse, Skip
     uncolor_ranks = ["W", "WD"]*4 ## Wild, wild draw 4
 
@@ -129,7 +131,6 @@ class Deck():
             for card in deck.draw_pile:
                 if card.rank in ["W", "WD"]:
                     card.color = None
-
         cards = []
         for card in range(num_cards):
             if len(self.draw_pile) == 0:
