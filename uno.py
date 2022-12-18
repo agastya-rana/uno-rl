@@ -35,8 +35,9 @@ class Uno(ABC):
             self.deck.shuffle_deck()
             self.deck.discard_pile.append(self.deck.draw_pile.pop())
 
-    def take_action(self, action, player_idx):
+    def take_action(self, action):
         card, param = action
+        player_idx = self.current_player
         if card == None:    # Player has no valid plays
             self.deck.draw_cards(1, player_idx)
             self.next_player()
