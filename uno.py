@@ -12,6 +12,7 @@ def simulate_game(strategy, num_players, num_decks=1, verbose=False):
             print("Discard pile: {}".format(game.deck.discard_pile[-1]))
         action = strategy[game.current_player](game) # Strategy is a list of strategies, one for each player, and takes in the whole game state
         game.take_action(action, game.current_player)
+        ## TODO: change above line and take_action function to not take in a player since it should always be the current player
         if game.has_won(game.current_player):
             if verbose:
                 print("Player {} wins!".format(game.current_player))
@@ -89,6 +90,10 @@ class Uno(ABC):
 
     def has_won(self, player_idx):
         return len(self.deck.player_pile[player_idx]) == 0
+    
+    def is_over(self):
+        return any([len(self.deck.player_pile[player_idx]) == 0 for player_idx in range(self.num_players)])
+
 class Deck():
     colors = ['R', 'G', 'Y', 'B', None]
     colored_ranks = [str(n) for n in range(10)] + [str(n) for n in range(1, 10)] + ["D", "R", "S"]*2 ## Draw2, Reverse, Skip
