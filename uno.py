@@ -11,7 +11,7 @@ def simulate_game(strategy, num_players, num_decks=1, verbose=False):
             print("Player {}'s hand: {}".format(game.current_player, game.deck.player_pile[game.current_player]))
             print("Discard pile: {}".format(game.deck.discard_pile[-1]))
         action = strategy[game.current_player](game) # Strategy is a list of strategies, one for each player, and takes in the whole game state
-        game.take_action(action, game.current_player)
+        game.take_action(action)
         ## TODO: change above line and take_action function to not take in a player since it should always be the current player
         if game.has_won(game.current_player):
             if verbose:
