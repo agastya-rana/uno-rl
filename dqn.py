@@ -1,8 +1,8 @@
+import numpy as np
+import random
+import itertools as it
 
 
-## Required methods of game
-
-## 
-
-
-
+class DQN():
+    
+    
