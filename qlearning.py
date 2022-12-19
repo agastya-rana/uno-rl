@@ -164,38 +164,43 @@ class QLearningAgent():
         self.last_state = None
         self.last_action = None
 
-    def train(self, timelimit=10, agent_idx=0, other_player=random_strategy):
-        start_time = time.time()
-        num_players = 2
-        num_decks = 1
-        while time.time() - start_time < timelimit:
-            ## Init game
-            game = Uno(num_players, Deck(num_decks))
-            game.initial_state()
+    def learn_over_game(self, num_players=2, num_decks=1, agent_idx=0, other_player=random_strategy):
+        game = Uno(num_players, Deck(num_decks))
+        game.initial_state()
+        while game.current_player != agent_idx:
+            ## Take other_player strat actions until it's my turn
+            other_action = other_player(game)
+            game.take_action(other_action)
+        while not game.is_over():
+            ## Choose action
+            state_bucket = self.bucket_state(game)
+            action_bucket, action = self.get_action(game, state_bucket)
+            game.take_action(action)
+            reward = 1 if game.has_won(agent_idx) else 0
+            ## Compute the reward and final state (by simulating the other players)
             while game.current_player != agent_idx:
-                ## Take other_player strat actions until it's my turn
                 other_action = random_strategy(game)
                 game.take_action(other_action)
-            while not game.is_over():
-                ## Choose action
-                state_bucket = self.bucket_state(game)
-                action_bucket, action = self.get_action(game, state_bucket)
-                game.take_action(action)
-                reward = 1 if game.has_won(agent_idx) else 0
-                ## Compute the reward and final state (by simulating the other players)
-                while game.current_player != agent_idx:
-                    other_action = random_strategy(game)
-                    game.take_action(other_action)
-                    reward = -1 if game.has_won(game.current_player) else reward
-                next_state = self.bucket_state(game)
-                ## Update Q-values
-                self.update(state_bucket, action_bucket, reward, next_state)
+                reward = -1 if game.has_won(game.current_player) else reward
+            next_state = self.bucket_state(game)
+            ## Update Q-values
+            self.update(state_bucket, action_bucket, reward, next_state)
+    
+    
+    def train(self, timelimit=10, games_limit=None, agent_idx=0, other_player=random_strategy):
+        if timelimit is not None:
+            start_time = time.time()
+            while time.time() - start_time < timelimit:
+                self.learn_over_game(agent_idx=agent_idx, other_player=other_player)
+        else:
+            for i in range(games_limit):
+                self.learn_over_game(agent_idx=agent_idx, other_player=other_player)            
 
     def play(self, game, agent_idx=0, other_player=random_strategy):
         while not game.is_over():
             ## Choose action
             state_bucket = self.bucket_state(game)
-            action = self.get_action(game, state_bucket)
+            _, action = self.get_action(game, state_bucket)
             game.take_action(action)
             ## Compute the reward and final state (by simulating the other players)
             while game.current_player != agent_idx:
@@ -206,6 +211,7 @@ class QLearningAgent():
     def simulate(self, num_games=100, agent_idx=0, other_player=random_strategy):
         wins = 0
         for i in range(num_games):
+            ## add a discard memory later
             game = Uno(2, Deck(1))
             game.initial_state()
             wins += self.play(game, agent_idx, other_player)
@@ -217,8 +223,8 @@ class QLearningAgent():
     def load_q(self, filename):
         self.Q = np.load(filename)
     
-    def train_and_save(self, filename, timelimit=10, agent_idx=0, other_player=random_strategy):
-        self.train(timelimit, agent_idx, other_player)
+    def train_and_save(self, filename, timelimit=10, gamelimit=None, agent_idx=0, other_player=random_strategy):
+        self.train(timelimit=timelimit, games_limit=gamelimit, agent_idx=agent_idx, other_player=other_player)
         self.save_q(filename)
     
     def load_and_simulate(self, filename, num_games=100, agent_idx=0, other_player=random_strategy):
