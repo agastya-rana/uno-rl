@@ -172,9 +172,9 @@ class QLearningAgent():
             ## Take other_player strat actions until it's my turn
             other_action = other_player(game)
             game.take_action(other_action)
+        state_bucket = self.bucket_state(game)
         while not game.is_over():
             ## Choose action
-            state_bucket = self.bucket_state(game)
             action_bucket, action = self.get_action(game, state_bucket)
             game.take_action(action)
             reward = 1 if game.has_won(agent_idx) else 0
@@ -186,6 +186,7 @@ class QLearningAgent():
             next_state = self.bucket_state(game)
             ## Update Q-values
             self.update(state_bucket, action_bucket, reward, next_state)
+            state_bucket = next_state
     
     
     def train(self, timelimit=10, games_limit=None, agent_idx=0, other_player=random_strategy):
