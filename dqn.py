@@ -44,11 +44,16 @@ class DQNAgent():
         self.action_size = 8
         self.hidden_dim = 24
         self.learning_rate = 1e-3
-        pass
+        self.target_NN = self._build_model()
+        self.learning_NN = self._build_model()
     
     def train(self, num_rounds=100000, batch_update=1000):
         ## Train by running sims on the target network, storing in database and then updating learning
         ## Figure out how to deal with softmaxed invalid outputs
+        
+        ## Run the target batch_update times, and save (s,a,s,r)
+        ## Write q(s,a) for state s to be q(s,a) for all actions not taken and then q(s,a) + reward part for the action taken
+        
         pass
     
     def _build_model(self):

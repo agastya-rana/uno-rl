@@ -3,6 +3,7 @@ from uno import *
 from strat import *
 import random
 import numpy as np
+from numba import jit, cuda
 
 # ADD NOTE FOR GLEN: we take in whole game, but dont look at other players hands
 
@@ -193,8 +194,12 @@ class QLearningAgent():
             while time.time() - start_time < timelimit:
                 self.learn_over_game(agent_idx=agent_idx, other_player=other_player)
         else:
-            for i in range(games_limit):
-                self.learn_over_game(agent_idx=agent_idx, other_player=other_player)            
+            self.train_games(games_limit, agent_idx, other_player)
+    
+    @jit(target_backend='cuda')
+    def train_games(self, games_limit, agent_idx, other_player):
+        for i in range(games_limit):
+            self.learn_over_game(agent_idx=agent_idx, other_player=other_player)            
 
     def play(self, game, agent_idx=0, other_player=random_strategy):
         while not game.is_over():
