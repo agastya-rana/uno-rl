@@ -17,15 +17,16 @@ import time
 
 class DQNAgent():
 
-    def __init__(self, num_players=2, num_decks=1, discard_memory=1, memory_size=10000, other_player=random_strategy):
+    def __init__(self, num_players=2, num_decks=1, discard_memory=1, memory_size=10000, other_player=random_strategy, hidden_dim=24, num_layers=2, lr=1e-3):
         ## Create Learning, Target Network
         self.state_size = 56*(discard_memory+1) + (num_players-1)
         self.action_size = 8
-        self.hidden_dim = 24
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
         self.num_players = num_players
         self.num_decks = num_decks
         self.discard_memory = discard_memory
-        self.learning_rate = 1e-3
+        self.learning_rate = lr
         self.other_player = other_player
         self.target_NN = self._build_model()
         self.learning_NN = self._build_model()
@@ -152,7 +153,6 @@ class DQNAgent():
         for learn_iter in range(num_learning_iter):
             print("Iter", learn_iter)
             for game in range(batch_update):
-                print("Game done")
                 game = Uno(self.num_players, Deck(self.num_decks, self.discard_memory))
                 game.initial_state()
                 nn_input = self.conv_game_to_state(game)
@@ -181,7 +181,8 @@ class DQNAgent():
         # Neural Net for Deep-Q learning Model
         model = Sequential()
         model.add(Dense(self.hidden_dim, input_shape=[self.state_size,], activation='relu'))
-        model.add(Dense(self.hidden_dim, activation='relu'))
+        for i in range(self.num_layers-1):
+            model.add(Dense(self.hidden_dim, activation='relu'))
         model.add(Dense(self.action_size, activation='softmax'))
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
         return model
