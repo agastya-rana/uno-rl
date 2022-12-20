@@ -14,7 +14,6 @@ from numba import jit, cuda
 ## - Discard pile color (4) = 4
 ## - Prev Discard pile color (4) = 4 (see whether opponent is out of color)
 
-
 ## Action space as:
 ## - Draw card
 ## - Playing R, S, D, W, WD
@@ -208,7 +207,6 @@ class QLearningAgent():
             state_bucket = self.bucket_state(game)
             _, action = self.get_action(game, state_bucket)
             game.take_action(action)
-            ## Compute the reward and final state (by simulating the other players)
             while game.current_player != agent_idx:
                 other_action = random_strategy(game)
                 game.take_action(other_action)
@@ -220,6 +218,9 @@ class QLearningAgent():
             ## add a discard memory later
             game = Uno(2, Deck(1))
             game.initial_state()
+            while game.current_player != agent_idx:
+                other_action = other_player(game)
+                game.take_action(other_action)
             wins += self.play(game, agent_idx, other_player)
         return wins / num_games
 
