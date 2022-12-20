@@ -3,7 +3,7 @@ from uno import *
 from strat import *
 import random
 import numpy as np
-from numba import jit, cuda
+#from numba import jit, cuda
 
 # ADD NOTE FOR GLEN: we take in whole game, but dont look at other players hands
 
@@ -196,7 +196,7 @@ class QLearningAgent():
         else:
             self.train_games(games_limit, agent_idx, other_player)
     
-    @jit(target_backend='cuda')
+    #@jit(target_backend='cuda')
     def train_games(self, games_limit, agent_idx, other_player):
         for i in range(games_limit):
             self.learn_over_game(agent_idx=agent_idx, other_player=other_player)            

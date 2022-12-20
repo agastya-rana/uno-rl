@@ -6,5 +6,6 @@ if __name__ == "__main__":
     start = time.time()
     gamesNum = 1000000
     agent.train_and_save("qlearning.npy", timelimit=None, gamelimit=gamesNum)
-    print(agent.load_and_simulate("qlearning.npy", 1000))
-    print(f'GamesNum: {gamesNum}, Duration: {time.time()-start}')
+    print(f'Train Duration: {time.time()-start}')
+    print("Win percentage over 100k games", agent.load_and_simulate("qlearning.npy", 100000))
+    print(f'Train over {int(gamesNum/1000)}k Games, Duration: {time.time()-start}')
