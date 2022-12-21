@@ -3,11 +3,10 @@ from uno import *
 from strat import *
 import random
 import numpy as np
-#from numba import jit, cuda
 
-# ADD NOTE FOR GLEN: we take in whole game, but dont look at other players hands
+## Note: in playing Uno, we leave the other player's hands hidden from the view of our agent.
 
-## We want to approximate the state space as:
+## We approximate the state space as:
 ## - Num cards of each color that we have (0, 1-2, 3+)^(4 + [W OR WD]) = 243
 ## - Num of each special cards, per color (0, 1+) ^ (([R OR S OR D]) (4)) = 8
 ## - Num of cards all the other players have (1, 2-4, 5+)(num_players) = 3(num_players-1)
@@ -34,8 +33,8 @@ class QLearningAgent():
         self.last_action = None
 
     def bucket_state(self, game):
+        ## Define the bucket that state of game is in
         hand = game.deck.player_pile[game.current_player]
-
         ## - Num cards of each color that we have (0, 1-2, 3+)^(4 + [W OR WD]) = 243
         def bucket_num_cards_color():
             # count number of cards of each color
@@ -63,7 +62,6 @@ class QLearningAgent():
             # index into 0-15
             return sum([num_special[color] * (2 ** color) for color in range(len(num_special))])
 
-
         ## - Num of cards all the other players have (1, 2-4, 5+)(num_players) = 3(num_players-1)
         def bucket_num_cards_other_players():
             # count number of cards of each player
@@ -87,7 +85,6 @@ class QLearningAgent():
         def discard_pile_color_idx_prev():
             return game.deck.colors.index(game.deck.discard_pile[-2].color)
 
-        
         def index_all():
             (aH, bH, cH, dH, eH) = (bucket_num_cards_color(), bucket_special_cards_per_color(), bucket_num_cards_other_players(), discard_pile_color_idx(), discard_pile_color_idx_prev())
             (aN, bN, cN, dN, eN) = (243, 16, 3 * (len(game.deck.player_pile) - 1), 4, 4)
@@ -115,6 +112,7 @@ class QLearningAgent():
         return idx
 
     def get_action(self, game, state_bucket):
+        ## Choose action based on epsilon-greedy
         possibilities = game.possible_actions(game.current_player)
         cards = [p[0] for p in possibilities]
         if random.random() < self.epsilon:
@@ -165,6 +163,7 @@ class QLearningAgent():
         self.last_action = None
 
     def learn_over_game(self, num_players=2, num_decks=1, agent_idx=0, other_player=random_strategy):
+        ## Updating q-vals over a single game
         game = Uno(num_players, Deck(num_decks))
         game.initial_state()
         while game.current_player != agent_idx:
