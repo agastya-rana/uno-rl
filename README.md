@@ -17,7 +17,7 @@ Note that due to the large size of the dense NN used for DQN, even simulating th
 Run `python qlearning_test.py` to simulate 100,000 games of Elven's Q-learning agent, and run `python dqn_test.py` to simulate
 1000 games of Agastya's DQN agent.
 
-Since these RL models took a lot of time to train, the trained information for both models (numpy array of Q-values for Q-learning (qlearning.npy) and NN model for DQN (in the zip file)) is submitted alongside the code. Code required to run these models is provided in `qlearning_test.py` and `dqn_test.py` respectively.
+Since these RL models took a lot of time to train, the trained information for both models (numpy array of Q-values for Q-learning (qlearning.npy) and NN model for DQN is submitted alongside the code. Code required to run these models is provided in `qlearning_test.py` and `dqn_test.py` respectively.
 
 
 # Success Rate, Discusison
@@ -37,12 +37,12 @@ DQN: As a benchmark, although a [stanford paper on beating Uno with RL](https://
 
 ## File Structure
 * `README.md` - This file
-* `uno.py` - Our implmentation of the Uno game
+* `uno.py` - Our implementation of the Uno game
 * `qlearning.py` - Our implementation of the Q-Learning agent
 * `qlearning_test.py` - Tests for the Q-Learning agent
 * `dqn.py` - Our implementation of the DQN agent
 * `dqn_test.py` - Tests for the DQN agent
-* `strat.py` - Our implementation of the random and greedy agents
-* `DQN_Sample_Model.zip` - DQN Model
-* `QLearning_Sample_Qs.` - QLearning Model
+* `strat.py` - Our implementation of the random agents
+* `DQN_Sample_Model` - DQN Sample Model
+* `QLearning_Sample_Qs.npy` - QLearning Model
 
