@@ -1,6 +1,10 @@
 # Reinforcement Learning for Uno
 The following is a Reinforcement Learning project applied to Uno for CS474, created by Elven Shum and Agastya Rana.
 
+# TL:DR
+Run qlearning_test.py to simulate __ games of Elven's Q-learning agent, and run dqn_test.py to simulate
+1000 games of Agastya's DQN agent.
+
 We worked in a team of two by splitting up the work as follows:
 1. Both of us worked together on the implementation of the Uno game
 2. Elven Shum worked on the Q-Learning Algorithm (devising approximators, hyperparameter tuning)
