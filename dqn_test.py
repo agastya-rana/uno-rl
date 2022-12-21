@@ -3,8 +3,8 @@ import time
 
 if __name__ == "__main__":
     num_layers=2
-    discard_memory=10
-    hidden_dim=50
+    discard_memory=3
+    hidden_dim=25
     lr = 1e-3
     batch = 10 ## Update learning network every _ games
     itera = 100 ## Number of batch updates

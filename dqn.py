@@ -19,8 +19,9 @@ class DQNAgent():
 
     def __init__(self, num_players=2, num_decks=1, discard_memory=1, memory_size=10000, other_player=random_strategy, hidden_dim=24, num_layers=2, lr=1e-3):
         ## Create Learning, Target Network
-        self.state_size = 56*(discard_memory+1) + (num_players-1)
+        self.state_size = 54*(discard_memory+1) + (num_players-1)
         self.action_size = 8
+        self.unique_card = 54
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         self.num_players = num_players
@@ -33,77 +34,47 @@ class DQNAgent():
         self.memory = deque(maxlen=memory_size)
         self.epsilon = 0.2
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.99
         self.gamma = 0.98
 
     ranks = [str(n) for n in range(10)] + ["R", "S", "D"]
     colors = ["R", "Y", "B", "G"]
     specials = ["R", "S", "D", "W", "WD"]
+    act_dict = {}
+    for i in range(52):
+        act_dict[i] = (Card(ranks[i%13], colors[i//13]), None)
+    for i in range(52, 56):
+        act_dict[i] = (Card("W", None), colors[i%4])
+    for i in range(56, 60):
+        act_dict[i] = (Card("WD", None), colors[i%4])
+    act[60] = (None, None)
 
-    def conv_cards_to_list(self, state, cards):
-        for card in cards:
-            if card.rank == 'W':
-                state[-2] += 1
-            elif card.rank == 'WD':
-                state[-1] += 1
-            else:
-                state[self.ranks.index(card.rank) + 13*self.colors.index(card.color)] += 1
-        return state
+    state_dict = {}
+    for i in range(52):
+        state_dict[Card(ranks[i%13], colors[i//13])] = idx
+    state_dict[Card("W", None)] = 52
+    state_dict[Card("WD", None)] = 53
 
     def conv_game_to_state(self, game):
-        """ Returns a list containing the entire state"""
-        ## Tensor contains one 4 x 13 + 2 = 56 list containing number of each card in own hand 
-        ## Then contains number of cards in others hands: num_players - 1 normalized by 7
-        ## Then contains the discard pile last x elements ## 56 x 7 list of one hot encodings - could try to boil this down by
-        ## ignoring rank unless special card
-        temp = [0 for i in range(56)]
-        state = self.conv_cards_to_list(temp.copy(), game.deck.player_pile[game.current_player])
-        [state.extend(self.conv_cards_to_list(temp.copy(), [game.deck.discard_pile[-(i+1)]])) for i in range(self.discard_memory)]
-        state.extend([len(game.deck.player_pile[player_idx])/7 for player_idx in range(game.num_players) if player_idx != game.current_player])
-        return state
-
-    def filter_action(self, action_idxs, game):
-        ## Given an ordered list of action_idxs preferred, find the topmost one that works for the game
-        possibilities = game.possible_actions(game.current_player)
-        cards = [p[0] for p in possibilities]
-        for action_bucket in action_idxs:
-            if action_bucket == 0:
-                if cards[0] is None:
-                    move_idx = 0
-                else:
-                    continue
-            elif action_bucket in [1, 2, 3, 4, 5]:
-                try:
-                    move_idx = [c.rank for c in cards].index(self.specials[action_bucket-1])
-                except:
-                    continue
-            elif action_bucket == 6:
-                try:
-                    move_idx = [c.color for c in cards].index(game.discard_card().color)
-                except:
-                    continue
-            elif action_bucket == 7:
-                try:
-                    move_idx = [c.rank for c in cards].index(game.discard_card().rank)
-                except:
-                    continue
-            else:
-                print("Should not be here, since one of the above action buckets should be satisfied first")
-                print(action_order, possibilities, game.discard_card())
-                raise ValueError
-            return action_bucket, possibilities[move_idx]
-        print("Nothing worked")
-        print(action_order, possibilities, [c.color for c in cards], [c.rank for c in cards], game.discard_card().color, game.discard_card().rank)
-        raise ValueError
+        """ Returns a state_size numpy containing the entire state"""
+        ## Tensor contains one 4 x 13 + 2 = 54 elements containing number of each card in own hand 
+        ## Then contains the discard pile last x elements ## 54 times x elements 
+        ## Then contains number of cards in others hands: num_players - 1 element normalized by 7
+        state = np.zeros(self.state_size)
+        ## Add in my own cards
+        for card in cards:
+            state[state_dict[card]] += 1
+        for i in range(self.discard_memory):
+            state[self.unique_card*i + state_dict[game.deck.discard_pile[-(i+1)]]] = 1
+        state[-1] = len(game.deck.player_pile[1-game.current_player])/7
+        ## TODO: change to following to allow for more than 2 players
+        #for i in range(self.num_players-1):
+        #    state[-(i+1):] = [len(game.deck.player_pile[player_idx])/7 for player_idx in range(game.num_players) if player_idx != game.current_player]
+        return state.reshape(1, -1)
 
     def bucket_action(self, action, game):
-        ## Return index of Q-learning bucket that corresponds to this action
-        ## 8 actions
+        ## Return index of Q-learning bucket (8 buckets) that corresponds to this action
         card, param = action
-        #if card is not None:
-        #    print("Bucket action", card.color, card.rank, param, game.discard_card().color, game.discard_card().rank)
-        #else:
-        #    print("Bucket action, none card")
         if card is None:
             idx = 0
         elif card.rank in self.specials:
@@ -116,27 +87,47 @@ class DQNAgent():
         return idx
     
     def decide_action(self, nn_input, game):
+        possibilities = game.possible_actions(game.current_player)
+        if possibilities[0] == (None, None):
+            return 60, (None, None)
         if np.random.rand() <= self.epsilon:
             ## Choose random action in possible action space
-            possibilities = game.possible_actions(game.current_player)
             action = possibilities[random.randint(0, len(possibilities) - 1)]
             return self.bucket_action(action, game), action
-        nn_input = np.asarray(nn_input).reshape(1, -1)
         act_values = self.target_NN.predict(nn_input, verbose = 0)[0]
-        action_order = (-act_values).argsort()
-        return self.filter_action(action_order, game)
-        ## Now need to go through these actions and filter out those that are possible
-        ## Check online for alternate solutions to this validation problem
-
+        cards = [p[0] for p in possibilities]
+        iters = 0
+        while True:
+            if iters > 100:
+                raise ValueError
+            sample_act = np.random.choice(self.action_size, p=act_values)
+            if sample_act == 0:
+                    continue
+            elif sample_act in [1, 2, 3, 4, 5]:
+                try:
+                    move_idx = [c.rank for c in cards].index(self.specials[action_bucket-1])
+                except:
+                    continue
+            elif sample_act == 6:
+                try:
+                    move_idx = [c.color for c in cards].index(game.discard_card().color)
+                except:
+                    continue
+            elif sample_act == 7:
+                try:
+                    move_idx = [c.rank for c in cards].index(game.discard_card().rank)
+                except:
+                    continue
+            iters += 1
+        return sample_act, possibilities[move_idx]
+        #action_order = (-act_values).argsort()
+       
     def replay(self, sample_size):
         minibatch = random.sample(self.memory, sample_size)
         for state, action, reward, next_state, done in minibatch:
-            state = np.asarray(state).reshape(1, -1)
-            next_state = np.asarray(next_state).reshape(1, -1)
             target = reward
             if not done:
-                target = (reward + self.gamma *
-                          np.amax(self.learning_NN.predict(next_state, verbose = 0)[0]))
+                target = (reward + self.gamma*np.amax(self.learning_NN.predict(next_state, verbose = 0)[0]))
             target_f = self.learning_NN.predict(state, verbose = 0)
             target_f[0][action] = target
             self.learning_NN.fit(state, target_f, epochs=1, verbose=0)
@@ -161,7 +152,6 @@ class DQNAgent():
                     other_action = other_player(game)
                     game.take_action(other_action)
                 while not game.is_over():
-                    ## Choose action
                     action_bucket, action = self.decide_action(nn_input, game)
                     game.take_action(action)
                     reward = 1 if game.has_won(agent_idx) else 0
@@ -172,9 +162,8 @@ class DQNAgent():
                     next_state = self.conv_game_to_state(game)
                     self.memory.append((nn_input, action_bucket, reward, next_state, game.is_over()))
                     nn_input = next_state
-            print("Sims done, replay starting")
+            print("Sims done, replay starting for iter", learn_iter)
             self.replay(sample_size)
-            ## Copy training to learning
             self.copy_train_learn()
     
     def _build_model(self):
@@ -225,3 +214,36 @@ class DQNAgent():
             wins += self.play(game, agent_idx, other_player)
             print(i)
         return wins / num_games
+
+
+class DQNAltAgent(DQNAgent):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.action_size = 52+8+1 ## all cards (minus wilds) + wilds + draw card move
+    
+    def decide_action(self, nn_input, game):
+        possibilities = game.possible_actions(game.current_player)
+        if possibilities[0] == (None, None):
+            return 60, (None, None)
+        if np.random.rand() <= self.epsilon:
+            ## Choose random action in possible action space
+            action = possibilities[random.randint(0, len(possibilities) - 1)]
+            card = action[0]
+            try:
+                bucket = self.ranks.index(card.rank) + self.colors.index(card.color)*13
+            except:
+                if card.rank == "W":
+                    bucket = 52 + self.colors.index(card.color)
+                elif card.rank == "WD":
+                    bucket = 56 + self.colors.index(card.color)
+                else:
+                    raise KeyError
+            return bucket, action
+        act_values = self.target_NN.predict(nn_input, verbose = 0)[0]
+        while True:
+            sample_act = np.random.choice(self.action_size, p=act_values)
+            if self.act_dict[sample_act] in possibilities:
+                return sample_act, self.act_dict[sample_act]
+
+        
