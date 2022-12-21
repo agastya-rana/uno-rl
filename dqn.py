@@ -8,6 +8,8 @@ from keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 from strat import *
 import time
+from multiprocessing import Pool
+from functools import partial
 
 ## Need a learning and a target network network
 
@@ -202,18 +204,22 @@ class DQNAgent():
                 game.take_action(other_action)
         return game.has_won(agent_idx)
 
-    def simulate(self, num_games=100, agent_idx=0, other_player=random_strategy):
-        wins = 0
-        for i in range(num_games):
-            ## add a discard memory later
-            game = Uno(2, Deck(1, discard_memory=self.discard_memory))
-            game.initial_state()
-            while game.current_player != agent_idx:
-                other_action = other_player(game)
-                game.take_action(other_action)
-            wins += self.play(game, agent_idx, other_player)
-            print(i)
-        return wins / num_games
+    def simulate_par_helper(self, agent_idx, other_player, num_games):
+        game = Uno(2, Deck(1, discard_memory=self.discard_memory))
+        game.initial_state()
+        while game.current_player != agent_idx:
+            other_action = other_player(game)
+            game.take_action(other_action)
+        wins += self.play(game, agent_idx, other_player)
+        print(i)
+        return wins
+    
+    def simulate_par(self, num_games=100, agent_idx=0, other_player=random_strategy):
+        p = Pool(60)
+        partial_simulate = partial(self.simulate_par_helper, self, agent_idx, other_player)
+        results = p.map(self.simulate_par_helper, num_games)
+        print(results)
+        return sum(results)/num_games
 
 
 class DQNAltAgent(DQNAgent):
