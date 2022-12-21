@@ -156,6 +156,8 @@ class Card():
         self.color = color
 
     def __eq__(self, other):
+        if type(other) != type(self):
+            return False
         return self.rank == other.rank and self.color == other.color
     
     def __hash__(self):

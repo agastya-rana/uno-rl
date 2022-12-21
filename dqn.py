@@ -113,7 +113,7 @@ class DQNAgent():
                     break
             elif sample_act in [1, 2, 3, 4, 5]:
                 try:
-                    move_idx = [c.rank for c in cards].index(self.specials[action_bucket-1])
+                    move_idx = [c.rank for c in cards].index(self.specials[sample_act-1])
                     break
                 except:
                     continue
@@ -250,15 +250,14 @@ class DQNAltAgent(DQNAgent):
         if np.random.rand() <= self.epsilon:
             ## Choose random action in possible action space
             action = possibilities[random.randint(0, len(possibilities) - 1)]
-            card = action[0]
+            card, p = action
             try:
                 bucket = self.ranks.index(card.rank) + self.colors.index(card.color)*13
             except:
-                print(card.color)
                 if card.rank == "W":
-                    bucket = 52 + self.colors.index(card.color)
+                    bucket = 52 + self.colors.index(p)
                 elif card.rank == "WD":
-                    bucket = 56 + self.colors.index(card.color)
+                    bucket = 56 + self.colors.index(p)
                 else:
                     raise KeyError
             return bucket, action
@@ -270,7 +269,8 @@ class DQNAltAgent(DQNAgent):
                     if self.act_dict[sample_act] == p:
                         return sample_act, p
                 except:
-                    print(possibilities)
+                    print(p)
+                    raise ValueError
 
 
         
