@@ -154,3 +154,9 @@ class Card():
     def __init__(self, rank, color=None):
         self.rank = rank
         self.color = color
+
+    def __eq__(self, other):
+        return self.rank == other.rank and self.color == other.color
+    
+    def __hash__(self):
+        return hash((self.rank, self.color))

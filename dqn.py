@@ -49,13 +49,14 @@ class DQNAgent():
         act_dict[i] = (Card("W", None), colors[i%4])
     for i in range(56, 60):
         act_dict[i] = (Card("WD", None), colors[i%4])
-    act[60] = (None, None)
+    act_dict[60] = (None, None)
 
     state_dict = {}
     for i in range(52):
-        state_dict[Card(ranks[i%13], colors[i//13])] = idx
-    state_dict[Card("W", None)] = 52
-    state_dict[Card("WD", None)] = 53
+        state_dict[Card(ranks[i%13], colors[i//13])] = i
+    for c in colors+[None]:
+        state_dict[Card("W", c)] = 52
+        state_dict[Card("WD", c)] = 53
 
     def conv_game_to_state(self, game):
         """ Returns a state_size numpy containing the entire state"""
@@ -64,10 +65,11 @@ class DQNAgent():
         ## Then contains number of cards in others hands: num_players - 1 element normalized by 7
         state = np.zeros(self.state_size)
         ## Add in my own cards
+        cards = game.deck.player_pile[game.current_player]
         for card in cards:
-            state[state_dict[card]] += 1
+            state[self.state_dict[card]] += 1
         for i in range(self.discard_memory):
-            state[self.unique_card*i + state_dict[game.deck.discard_pile[-(i+1)]]] = 1
+            state[self.unique_card*i + self.state_dict[game.deck.discard_pile[-(i+1)]]] = 1
         state[-1] = len(game.deck.player_pile[1-game.current_player])/7
         ## TODO: change to following to allow for more than 2 players
         #for i in range(self.num_players-1):
@@ -90,8 +92,8 @@ class DQNAgent():
     
     def decide_action(self, nn_input, game):
         possibilities = game.possible_actions(game.current_player)
-        if possibilities[0] == (None, None):
-            return 60, (None, None)
+        if possibilities[0][0] is None:
+            return 0, (None, None)
         if np.random.rand() <= self.epsilon:
             ## Choose random action in possible action space
             action = possibilities[random.randint(0, len(possibilities) - 1)]
@@ -100,27 +102,35 @@ class DQNAgent():
         cards = [p[0] for p in possibilities]
         iters = 0
         while True:
-            if iters > 100:
-                raise ValueError
-            sample_act = np.random.choice(self.action_size, p=act_values)
+            if iters >= 100:
+                sample_act = (-act_values).argsort()[iters-100]
+                if iters > 150:
+                    raise ValueError
+            else:
+                sample_act = np.random.choice(self.action_size, p=act_values)
             if sample_act == 0:
-                    continue
+                    move_idx = 0
+                    break
             elif sample_act in [1, 2, 3, 4, 5]:
                 try:
                     move_idx = [c.rank for c in cards].index(self.specials[action_bucket-1])
+                    break
                 except:
                     continue
             elif sample_act == 6:
                 try:
                     move_idx = [c.color for c in cards].index(game.discard_card().color)
+                    break
                 except:
                     continue
             elif sample_act == 7:
                 try:
                     move_idx = [c.rank for c in cards].index(game.discard_card().rank)
+                    break
                 except:
                     continue
             iters += 1
+        #print("hi")
         return sample_act, possibilities[move_idx]
         #action_order = (-act_values).argsort()
        
@@ -143,9 +153,11 @@ class DQNAgent():
         ## Train by running sims on the target network, storing in database and then updating learning
         ## Figure out how to deal with softmaxed invalid outputs
         assert sample_size < batch_update*10
+        #start_time=0
         for learn_iter in range(num_learning_iter):
             print("Iter", learn_iter)
-            for game in range(batch_update):
+            #print(time.time()-start_time)
+            for g in range(batch_update):
                 game = Uno(self.num_players, Deck(self.num_decks, self.discard_memory))
                 game.initial_state()
                 nn_input = self.conv_game_to_state(game)
@@ -164,6 +176,7 @@ class DQNAgent():
                     next_state = self.conv_game_to_state(game)
                     self.memory.append((nn_input, action_bucket, reward, next_state, game.is_over()))
                     nn_input = next_state
+            #start_time = time.time()
             print("Sims done, replay starting for iter", learn_iter)
             self.replay(sample_size)
             self.copy_train_learn()
