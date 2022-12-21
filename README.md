@@ -26,9 +26,12 @@ of strategy in Uno (as our families had led us to believe!), Uno gameplay was hi
 definitely limited the performance of our agents to low margins (< 5% over random). Furthermore, due to
 the lack of a reasonable heuristic-based comparative agent, we had to resort to a random agent to evaluate
 the performance of our algorithms as applied to the game of Uno.  We noted that we
-required the simulation of 100,000 games to obtain a win percentage precise to 0.1%, and achieved the following performance with our models: Q-Learning: 51.8% +/- 0.1%, DQN: 53.5% +/- 1%.
+required the simulation of 100,000 games to obtain a win percentage precise to 0.1%, and achieved the following performance with our models: Q-Learning: 51.8% +/- 0.1%, DQN: 53.5% +/- 0.5%.
 
-We believe, this result is actually quite reasonable. As a benchmark, although a [stanford paper on beating Uno with RL](https://web.stanford.edu/class/aa228/reports/2020/final79.pdf) gets a winrate of 63.5%, their DQN agent **can see the opponent's cards**, which we believe gives it a serious (and perhaps unreasonable) advantage. Our model, to properly simulate a real uno player, can only access it's own cards. Thus, we believe given the highly stochastic nature of Uno, our game play percentage is reasonably successful.
+We believe, this result is quite reasonable. 
+For our Q-Learning Model, given the immense size of the Uno State space, we had to substantially apply bucketing. Many of the strategies that could've been learned were limited to only small numbers of cards, in addition to conceptually equating all 'special' cards.
+
+DQN: As a benchmark, although a [stanford paper on beating Uno with RL](https://web.stanford.edu/class/aa228/reports/2020/final79.pdf) gets a winrate of 63.5%, their DQN agent **can see the opponent's cards**, which we believe gives it a serious (and perhaps unreasonable) advantage. Our model, to properly simulate a real uno player, can only access it's own cards. Thus, we believe given the highly stochastic nature of Uno, our win percentage for DQN is reasonably successful.
 
 
 
@@ -39,5 +42,7 @@ We believe, this result is actually quite reasonable. As a benchmark, although a
 * `qlearning_test.py` - Tests for the Q-Learning agent
 * `dqn.py` - Our implementation of the DQN agent
 * `dqn_test.py` - Tests for the DQN agent
-* `run.py` - Runs the Q-Learning agent against a random agent
-* `strats.py` - Our implementation of the random and greedy agents
+* `strat.py` - Our implementation of the random and greedy agents
+* `DQN_Sample_Model.zip` - DQN Model
+* `QLearning_Sample_Qs.` - QLearning Model
+
