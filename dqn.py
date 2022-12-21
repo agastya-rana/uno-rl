@@ -254,6 +254,7 @@ class DQNAltAgent(DQNAgent):
             try:
                 bucket = self.ranks.index(card.rank) + self.colors.index(card.color)*13
             except:
+                print(card.color)
                 if card.rank == "W":
                     bucket = 52 + self.colors.index(card.color)
                 elif card.rank == "WD":
@@ -264,9 +265,12 @@ class DQNAltAgent(DQNAgent):
         act_values = self.target_NN.predict(nn_input, verbose = 0)[0]
         while True:
             sample_act = np.random.choice(self.action_size, p=act_values)
-            print(possibilities)
             for p in possibilities:
-                if self.act_dict[sample_act] == p:
-                    return sample_act, p
+                try:
+                    if self.act_dict[sample_act] == p:
+                        return sample_act, p
+                except:
+                    print(possibilities)
+
 
         
