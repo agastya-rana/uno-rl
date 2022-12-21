@@ -11,16 +11,9 @@ import time
 from multiprocessing import Pool
 from functools import partial
 
-## Need a learning and a target network network
-
-## Need to define parameters of each network (which should be the same)
-## Number of each kinda card in own deck
-## How do we capture the agent knowing that the opponent is out of a single color - need only the last #num_players cards on the deck
-
 class DQNAgent():
 
     def __init__(self, num_players=2, num_decks=1, discard_memory=1, memory_size=10000, other_player=random_strategy, hidden_dim=24, num_layers=2, lr=1e-3):
-        ## Create Learning, Target Network
         self.state_size = 54*(discard_memory+1) + (num_players-1)
         self.action_size = 8
         self.unique_card = 54
@@ -31,6 +24,7 @@ class DQNAgent():
         self.discard_memory = discard_memory
         self.learning_rate = lr
         self.other_player = other_player
+        ## Create Learning, Target Network
         self.target_NN = self._build_model()
         self.learning_NN = self._build_model()
         self.memory = deque(maxlen=memory_size)
@@ -39,6 +33,8 @@ class DQNAgent():
         self.epsilon_decay = 0.99
         self.gamma = 0.98
 
+
+    ## Dictionaries and lists to speed up game-play
     ranks = [str(n) for n in range(10)] + ["R", "S", "D"]
     colors = ["R", "Y", "B", "G"]
     specials = ["R", "S", "D", "W", "WD"]
@@ -59,7 +55,7 @@ class DQNAgent():
         state_dict[Card("WD", c)] = 53
 
     def conv_game_to_state(self, game):
-        """ Returns a state_size numpy containing the entire state"""
+        """ Returns a state_size numpy containing the entire state of the game"""
         ## Tensor contains one 4 x 13 + 2 = 54 elements containing number of each card in own hand 
         ## Then contains the discard pile last x elements ## 54 times x elements 
         ## Then contains number of cards in others hands: num_players - 1 element normalized by 7
@@ -77,7 +73,7 @@ class DQNAgent():
         return state.reshape(1, -1)
 
     def bucket_action(self, action, game):
-        ## Return index of Q-learning bucket (8 buckets) that corresponds to this action
+        ## Return index of Q-learning bucket (8 buckets in action space) that corresponds to this action
         card, param = action
         if card is None:
             idx = 0
@@ -91,6 +87,7 @@ class DQNAgent():
         return idx
     
     def decide_action(self, nn_input, game):
+        ## Use epsilon-greedy to decide actions as output of the target NN
         possibilities = game.possible_actions(game.current_player)
         if possibilities[0][0] is None:
             return 0, (None, None)
@@ -135,12 +132,13 @@ class DQNAgent():
         #action_order = (-act_values).argsort()
        
     def replay(self, sample_size):
+        ## Replay from the sample database to train the learning network
         minibatch = random.sample(self.memory, sample_size)
         for state, action, reward, next_state, done in minibatch:
             target = reward
             if not done:
-                target = (reward + self.gamma*np.amax(self.learning_NN.predict(next_state, verbose = 0)[0]))
-            target_f = self.learning_NN.predict(state, verbose = 0)
+                target = (reward + self.gamma*np.amax(self.target_NN.predict(next_state, verbose = 0)[0]))
+            target_f = self.target_NN.predict(state, verbose = 0)
             target_f[0][action] = target
             self.learning_NN.fit(state, target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
@@ -151,11 +149,10 @@ class DQNAgent():
     
     def train(self, agent_idx=0, num_learning_iter=100, batch_update=1000, sample_size=1000, fname=None):
         ## Train by running sims on the target network, storing in database and then updating learning
-        ## Figure out how to deal with softmaxed invalid outputs
         assert sample_size < batch_update*10
         #start_time=0
         for learn_iter in range(num_learning_iter):
-            print("Iter", learn_iter)
+            print("Simulating Batch", learn_iter)
             #print(time.time()-start_time)
             for g in range(batch_update):
                 game = Uno(self.num_players, Deck(self.num_decks, self.discard_memory))
@@ -177,11 +174,11 @@ class DQNAgent():
                     self.memory.append((nn_input, action_bucket, reward, next_state, game.is_over()))
                     nn_input = next_state
             #start_time = time.time()
-            print("Sims done, replay starting for iter", learn_iter)
+            print("Replay Batch", learn_iter)
             self.replay(sample_size)
             self.copy_train_learn()
-            if learn_iter == 100 or learn_iter == 150:
-                self.save_NN(fname)
+            #if learn_iter == 100 or learn_iter == 150:
+            #    self.save_NN(fname)
 
     
     def _build_model(self):
@@ -222,6 +219,7 @@ class DQNAgent():
         return game.has_won(agent_idx)
 
     def simulate_par_helper(self, agent_idx, other_player, num_games):
+        ## Parallelizing the simulations
         game = Uno(2, Deck(1, discard_memory=self.discard_memory))
         game.initial_state()
         print(num_games)
@@ -256,7 +254,7 @@ class DQNAgent():
 
 
 class DQNAltAgent(DQNAgent):
-
+    ## An alternative DQN agent with a different action space - all the possible moves that a player can make
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.action_size = 52+8+1 ## all cards (minus wilds) + wilds + draw card move
