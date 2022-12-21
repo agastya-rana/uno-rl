@@ -8,7 +8,7 @@ if __name__ == "__main__":
     lr = 1e-3
     batch = 100 ## Update learning network every _ games
     itera = 100 ## Number of batch updates
-    agent = DQNAgent(num_layers=num_layers, discard_memory=discard_memory, hidden_dim=hidden_dim, memory_size=10*batch*10, lr=lr)
+    agent = DQNAltAgent(num_layers=num_layers, discard_memory=discard_memory, hidden_dim=hidden_dim, memory_size=10*batch*10, lr=lr)
     start = time.time()
     simulate_num = 1000
     agent.train_and_save("./DQN_%dlyr_%dhid_%ddis_%.5flr_%dit_%dba" % (num_layers, discard_memory, hidden_dim, lr, itera, batch), num_learning_iter=itera, batch_update=batch, sample_size=batch*7)

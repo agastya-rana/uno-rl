@@ -240,10 +240,12 @@ class DQNAltAgent(DQNAgent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.action_size = 52+8+1 ## all cards (minus wilds) + wilds + draw card move
+        self.target_NN = self._build_model()
+        self.learning_NN = self._build_model()
     
     def decide_action(self, nn_input, game):
         possibilities = game.possible_actions(game.current_player)
-        if possibilities[0] == (None, None):
+        if possibilities[0][0] is None:
             return 60, (None, None)
         if np.random.rand() <= self.epsilon:
             ## Choose random action in possible action space
@@ -262,7 +264,9 @@ class DQNAltAgent(DQNAgent):
         act_values = self.target_NN.predict(nn_input, verbose = 0)[0]
         while True:
             sample_act = np.random.choice(self.action_size, p=act_values)
-            if self.act_dict[sample_act] in possibilities:
-                return sample_act, self.act_dict[sample_act]
+            print(possibilities)
+            for p in possibilities:
+                if self.act_dict[sample_act] == p:
+                    return sample_act, p
 
         
