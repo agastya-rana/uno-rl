@@ -122,7 +122,7 @@ class DQNAgent():
             action = possibilities[random.randint(0, len(possibilities) - 1)]
             return self.bucket_action(action, game), action
         nn_input = np.asarray(nn_input).reshape(1, -1)
-        act_values = self.target_NN.predict(nn_input)[0]
+        act_values = self.target_NN.predict(nn_input, verbose = 0)[0]
         action_order = (-act_values).argsort()
         return self.filter_action(action_order, game)
         ## Now need to go through these actions and filter out those that are possible
@@ -136,8 +136,8 @@ class DQNAgent():
             target = reward
             if not done:
                 target = (reward + self.gamma *
-                          np.amax(self.learning_NN.predict(next_state)[0]))
-            target_f = self.learning_NN.predict(state)
+                          np.amax(self.learning_NN.predict(next_state, verbose = 0)[0]))
+            target_f = self.learning_NN.predict(state, verbose = 0)
             target_f[0][action] = target
             self.learning_NN.fit(state, target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
@@ -217,10 +217,11 @@ class DQNAgent():
         wins = 0
         for i in range(num_games):
             ## add a discard memory later
-            game = Uno(2, Deck(1))
+            game = Uno(2, Deck(1, discard_memory=self.discard_memory))
             game.initial_state()
             while game.current_player != agent_idx:
                 other_action = other_player(game)
                 game.take_action(other_action)
             wins += self.play(game, agent_idx, other_player)
+            print(i)
         return wins / num_games
