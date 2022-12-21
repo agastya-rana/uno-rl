@@ -149,7 +149,7 @@ class DQNAgent():
     def copy_train_learn(self):
         self.target_NN.set_weights(self.learning_NN.get_weights())
     
-    def train(self, agent_idx=0, num_learning_iter=100, batch_update=1000, sample_size=1000):
+    def train(self, agent_idx=0, num_learning_iter=100, batch_update=1000, sample_size=1000, fname=None):
         ## Train by running sims on the target network, storing in database and then updating learning
         ## Figure out how to deal with softmaxed invalid outputs
         assert sample_size < batch_update*10
@@ -180,6 +180,9 @@ class DQNAgent():
             print("Sims done, replay starting for iter", learn_iter)
             self.replay(sample_size)
             self.copy_train_learn()
+            if learn_iter == 100 or learn_iter == 150:
+                self.save_NN(fname)
+
     
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
@@ -198,11 +201,12 @@ class DQNAgent():
         self.target_NN = load_model(folder_name)
     
     def train_and_save(self, folder_name, agent_idx=0, num_learning_iter=100, batch_update=1000, sample_size=1000):
-        self.train(agent_idx=0, num_learning_iter=num_learning_iter, batch_update=batch_update, sample_size=sample_size)
+        self.train(agent_idx=0, num_learning_iter=num_learning_iter, batch_update=batch_update, sample_size=sample_size, fname=folder_name)
         self.save_NN(folder_name)
     
     def load_and_simulate(self, folder_name, num_games=100, agent_idx=0, other_player=random_strategy):
         self.load_NN(folder_name)
+        print("Loaded")
         return self.simulate(num_games, agent_idx, other_player)
 
     def play(self, game, agent_idx=0, other_player=random_strategy):
@@ -220,19 +224,35 @@ class DQNAgent():
     def simulate_par_helper(self, agent_idx, other_player, num_games):
         game = Uno(2, Deck(1, discard_memory=self.discard_memory))
         game.initial_state()
+        print(num_games)
         while game.current_player != agent_idx:
             other_action = other_player(game)
             game.take_action(other_action)
-        wins += self.play(game, agent_idx, other_player)
-        print(i)
+        wins = self.play(game, agent_idx, other_player)
         return wins
     
     def simulate_par(self, num_games=100, agent_idx=0, other_player=random_strategy):
         p = Pool(60)
         partial_simulate = partial(self.simulate_par_helper, self, agent_idx, other_player)
-        results = p.map(self.simulate_par_helper, num_games)
+        results = p.map(self.simulate_par_helper, range(num_games))
         print(results)
         return sum(results)/num_games
+    
+    def simulate(self, num_games=100, agent_idx=0, other_player=random_strategy):
+        ep = self.epsilon
+        self.epsilon = 0
+        wins = 0
+        for i in range(num_games):
+            game = Uno(2, Deck(1, discard_memory=self.discard_memory))
+            game.initial_state()
+            while game.current_player != agent_idx:
+                other_action = other_player(game)
+                game.take_action(other_action)
+            wins += self.play(game, agent_idx, other_player)
+            if i % 100 == 0:
+                print(i)
+        self.epsilon = ep
+        return wins/num_games
 
 
 class DQNAltAgent(DQNAgent):
